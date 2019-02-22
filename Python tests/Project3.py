@@ -104,9 +104,10 @@ def alignment_detect(img):
 	gray_image = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 	gray_bi_image = cv2.bilateralFilter(gray_image, BiD, BiSigC, BiSigS)
 	gray_gaus_image = cv2.GaussianBlur(gray_image, (Blur, Blur), 0)
-#	thresh_image = cv2.threshold(blurred_image, 127, 255, cv2.THRESH_BINARY)[1]
+	thresh_image = cv2.threshold(gray_bi_image, 127, 255, cv2.THRESH_BINARY)[1]
 	edged_bi_image = cv2.Canny(gray_bi_image, CannyLow, CannyHigh)
 	edged_gaus_image = cv2.Canny(gray_gaus_image, CannyLow, CannyHigh)
+	skeleton_image = skeleton(thresh_image)
 
 #	contours = cv2.findContours(gray_bi_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 	gray_bi_image_temp = np.copy(gray_bi_image)
@@ -199,16 +200,19 @@ def alignment_detect(img):
 	cv2.imshow("Source",            img)
 	cv2.imshow("gray_image",        gray_image)
 	cv2.imshow("gray_bi_image",     gray_bi_image)
-	cv2.imshow("edged_bi_image",    edged_bi_image)
-	cv2.imshow("edged_gaus_image",  edged_gaus_image)
-	cv2.imshow("gray_gaus_image",   gray_gaus_image)
-	cv2.imshow("lines_bi_image",    lines_bi_image)
-	cv2.imshow("lines_gaus_image",  lines_gaus_image)
-	cv2.imshow("plines_bi_image",   plines_bi_image)
-	cv2.imshow("plines_gaus_image", plines_gaus_image)
-	cv2.imshow("contour_image",     contour_image)
-	cv2.imshow("cross_image",       cross_image)
-	cv2.imshow("poly4_image",       poly4_image)
+	cv2.imshow("thresh_image",      thresh_image)
+	cv2.imshow("skeleton_image",    skeleton_image)
+	
+#	cv2.imshow("edged_bi_image",    edged_bi_image)
+#	cv2.imshow("edged_gaus_image",  edged_gaus_image)
+#	cv2.imshow("gray_gaus_image",   gray_gaus_image)
+#	cv2.imshow("lines_bi_image",    lines_bi_image)
+#	cv2.imshow("lines_gaus_image",  lines_gaus_image)
+#	cv2.imshow("plines_bi_image",   plines_bi_image)
+#	cv2.imshow("plines_gaus_image", plines_gaus_image)
+#	cv2.imshow("contour_image",     contour_image)
+#	cv2.imshow("cross_image",       cross_image)
+#	cv2.imshow("poly4_image",       poly4_image)
 
 def FindDistance(Point1, Point2):
 	#Note, don't bother finding the square root of the distance since we only care about the relative sizes not the actual distances
@@ -312,6 +316,23 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=3):
 	# Return the modified image.
 	return img
 
+def skeleton(img):
+	size = np.size(img)
+	skel = np.zeros(img.shape,np.uint8)
+#	ret,img = cv2.threshold(img,127,255,0)
+	element = cv2.getStructuringElement(cv2.MORPH_CROSS,(3,3))
+	done = False
+	while( not done):
+		eroded = cv2.erode(img,element)
+		temp = cv2.dilate(eroded,element)
+		temp = cv2.subtract(img,temp)
+		skel = cv2.bitwise_or(skel,temp)
+		img = eroded.copy()
+		zeros = size - cv2.countNonZero(img)
+		if zeros==size:
+		        done = True
+	return skel
+
 def draw_hough_lines(img, lines, color=[255, 0, 0], thickness=3):
 #'lines' sre theta/rho as returned from HoughLines, NOT x1,y1,x2,y2 are returned from HoughLinesP
 	# If there are no lines to draw, exit.
@@ -344,7 +365,8 @@ def do_processing():
 
 	#Load an image from a file into 'img' array
 #	img = cv2.imread("Alignment1.bmp");
-	img = cv2.imread("P1.jpg");
+#	img = cv2.imread("p1.jpg");
+	img = cv2.imread("p1-white.jpg");
 
 	while True:
 #		#Capture an image from the camera and assign to 'img' array
