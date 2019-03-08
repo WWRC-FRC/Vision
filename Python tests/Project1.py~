@@ -11,7 +11,7 @@ def show_webcam():
 	while True:
 		#Capture an image from the camera and assign to 'img' array
 		ret_val, img = cam.read()
-		if (ret_val == 0):
+		if (ret_val == 0)
 			print'No camera device found/image not found'
 			exit()
 		#Retrieve the image dimensions

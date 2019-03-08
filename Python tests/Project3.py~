@@ -212,7 +212,7 @@ def alignment_detect(img):
 #	cv2.imshow("plines_gaus_image", plines_gaus_image)
 #	cv2.imshow("contour_image",     contour_image)
 #	cv2.imshow("cross_image",       cross_image)
-	cv2.imshow("poly4_image",       poly4_image)
+#	cv2.imshow("poly4_image",       poly4_image)
 
 def FindDistance(Point1, Point2):
 	#Note, don't bother finding the square root of the distance since we only care about the relative sizes not the actual distances

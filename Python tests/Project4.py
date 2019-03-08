@@ -87,15 +87,20 @@ def init():
 	cv2.createTrackbar('H Gap',         "Controls" , HGap,      100, EmptyCallback)
 
 def alignment_detect(img):
-	gray_image = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-	harris_image = cv2.cornerHarris(gray_image,2,3,0.04)
-	dilate_image = cv2.dilate(harris_image,None)
-	img[dilate_image>0.01*dilate_image.max()]=[0,0,255]
-	
-	cv2.imshow("img",        img)
-	cv2.imshow("gray_image",        gray_image)
-	cv2.imshow("harris_image",        harris_image)
-	cv2.imshow("dilate_image",        dilate_image)
+	gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+
+	gray = np.float32(gray)
+	dst1 = cv2.cornerHarris(gray,2,3,0.04)
+
+	#result is dilated for marking the corners, not important
+	dst = cv2.dilate(dst1,None)
+
+	# Threshold for an optimal value, it may vary depending on the image.
+	img[dst>0.01*dst1.max()]=[0,0,255]
+
+	cv2.imshow('img',img)
+#	cv2.imshow('dst',dst)
+#	cv2.imshow('dst1',dst1)
 	
 def FindDistance(Point1, Point2):
 	#Note, don't bother finding the square root of the distance since we only care about the relative sizes not the actual distances

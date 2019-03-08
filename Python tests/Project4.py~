@@ -87,133 +87,21 @@ def init():
 	cv2.createTrackbar('H Gap',         "Controls" , HGap,      100, EmptyCallback)
 
 def alignment_detect(img):
-	global CannyLow
-	global CannyHigh
-	global Blur
-	global BlurSD
-	global BiD
-	global BiSigC
-	global BiSigS
-	global HRho
-	global HTheta
-	global HThresh
-	global HLen
-	global HGap
+	gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 
-	#Convert the image to gray scale for simpler edge processing
-	gray_image = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-	gray_bi_image = cv2.bilateralFilter(gray_image, BiD, BiSigC, BiSigS)
-	gray_gaus_image = cv2.GaussianBlur(gray_image, (Blur, Blur), 0)
-	thresh_image = cv2.threshold(gray_bi_image, 127, 255, cv2.THRESH_BINARY)[1]
-	edged_bi_image = cv2.Canny(gray_bi_image, CannyLow, CannyHigh)
-	edged_gaus_image = cv2.Canny(gray_gaus_image, CannyLow, CannyHigh)
-	skeleton_image = skeleton(thresh_image)
+	gray = np.float32(gray)
+	dst1 = cv2.cornerHarris(gray,2,3,0.04)
 
-#	contours = cv2.findContours(gray_bi_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-	gray_bi_image_temp = np.copy(gray_bi_image)
-	contours = cv2.findContours(gray_bi_image_temp, 1, 2)
+	#result is dilated for marking the corners, not important
+	dst = cv2.dilate(dst1,None)
 
-	edged_bi_image_temp = np.copy(edged_bi_image)
-	contours,hierarchy = cv2.findContours(edged_bi_image_temp, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+	# Threshold for an optimal value, it may vary depending on the image.
+	img[dst>0.01*dst1.max()]=[0,0,255]
 
-#	print contours
-
-#	cnt = contours[0]
-	cnt = max(contours, key = cv2.contourArea)
-	M = cv2.moments(cnt)
-
-	if M["m00"] != 0:
-	    cx = int(M["m10"] / M["m00"])
-	    cy = int(M["m01"] / M["m00"])
-	else:
-	    cx, cy = 0,0
-
-#	print M
-#	cx = int(M['m10']/M['m00'])
-#	cy = int(M['m01']/M['m00'])
-#	print "CX = ", cx, "CY = ", cy
-	cross_image = draw_cross(img, cx, cy)
-#	epsilon = 0.1*cv2.arcLength(cnt,True)
-#	approx = cv2.approxPolyDP(cnt,epsilon,True)
-
-	#Recover rotated bounding box
-#	rect = cv2.minAreaRect(cnt)
-#	box = cv2.cv.BoxPoints(rect)
-#	box = np.int0(box)
-#	print box
-
-	ConvexHullPoints = contoursConvexHull(contours)
-#	print "HullPoints = ", ConvexHullPoints
-	contour_image = np.copy(img)
-	cv2.polylines(contour_image, [ConvexHullPoints], True, (0,255,255), 2)
-
-	#Now reduce contours to a 4 point polygon
-	Poly4Points = np.array(ReducePoints(ConvexHullPoints, 4))
-#	Poly4Points = np.array(Poly4Points)
-#	print "Poly4 points", Poly4Points
-	poly4_image = np.copy(img)
-	cv2.polylines(poly4_image, [Poly4Points], True, (180,50,220), 2)
-
-#	cv2.drawContours(contour_image,[box],0,(0,0,255),2) #this works
-#	cv2.drawContours(contour_image, contours, 1, (0,255,0), 3)
-
-#	epsilon = 0.1*cv2.arcLength(cnt,True)
-#	approx = cv2.approxPolyDP(cnt,epsilon,True)
-
-#	print "cnt = ", cnt
-#	M = cv2.moments(cnt)
-#	print M
-#	print contours
-#	cv2.drawContours(img, contours, -1, (0,255,0), 3)
-#	cnt = contours[4]
-#	cv2.drawContours(img, [cnt], 0, (0,255,0), 3)
-
-#	#Dialate Cannyed image
-#	kernel = np.ones((3,3), np.uint8)
-#	dilated_image = cv2.dilate(cannyed_image, kernel, iterations=1)
-
-#	#Crop the image to the triangle we defined
-#	#Retrieve the image dimensions
-#	height, width = img.shape[:2]
-#	#Define a triangular region
-#	region_of_interest_vertices = [ (0, height - 1), (width / 2, 0), (width - 1, height - 1), ]
-#	cropped_image = region_of_interest( cannyed_image, np.array([region_of_interest_vertices], np.int32))
-
-	#HaughLinesP version
-	plines_bi = cv2.HoughLinesP( edged_bi_image, rho=HRho, theta= HTheta, threshold=HThresh, lines=np.array([]), minLineLength=HLen, maxLineGap=HGap)
-	plines_gaus = cv2.HoughLinesP( edged_gaus_image, rho=HRho, theta= HTheta, threshold=HThresh, lines=np.array([]), minLineLength=HLen, maxLineGap=HGap)
-	#Add the lines to the original gray scale image
-	plines_bi_image = draw_lines(img, plines_bi, color=[0, 255, 255])
-	plines_gaus_image = draw_lines(img, plines_gaus, color=[0, 255, 255])
+	cv2.imshow('img',img)
+#	cv2.imshow('dst',dst)
+	cv2.imshow('dst1',dst1)
 	
-
-	#HaughLines version
-	lines_bi = cv2.HoughLines( edged_bi_image,HRho, HTheta, HThresh)
-	lines_gaus = cv2.HoughLines( edged_gaus_image,HRho, HTheta, HThresh)
-	#Add the lines to the original gray scale image
-	lines_bi_image = draw_hough_lines(img, lines_bi)
-	lines_gaus_image = draw_hough_lines(img, lines_gaus)
-
-	#Display the lines found coordinate sets
-
-
-	cv2.imshow("Source",            img)
-	cv2.imshow("gray_image",        gray_image)
-	cv2.imshow("gray_bi_image",     gray_bi_image)
-	cv2.imshow("thresh_image",      thresh_image)
-	cv2.imshow("skeleton_image",    skeleton_image)
-	
-#	cv2.imshow("edged_bi_image",    edged_bi_image)
-#	cv2.imshow("edged_gaus_image",  edged_gaus_image)
-#	cv2.imshow("gray_gaus_image",   gray_gaus_image)
-#	cv2.imshow("lines_bi_image",    lines_bi_image)
-#	cv2.imshow("lines_gaus_image",  lines_gaus_image)
-#	cv2.imshow("plines_bi_image",   plines_bi_image)
-#	cv2.imshow("plines_gaus_image", plines_gaus_image)
-#	cv2.imshow("contour_image",     contour_image)
-#	cv2.imshow("cross_image",       cross_image)
-	cv2.imshow("poly4_image",       poly4_image)
-
 def FindDistance(Point1, Point2):
 	#Note, don't bother finding the square root of the distance since we only care about the relative sizes not the actual distances
 	xd = abs(Point1[0] - Point2[0])
@@ -378,7 +266,8 @@ def do_processing():
 		#Pass the image in to the alignment detector
 		alignment_detect(img)
 
-		if cv2.waitKey(1) == 27: 
+#		if cv2.waitKey(1) == 27: #(1) for video
+		if cv2.waitKey(0) == 27: #(0) for static pic
 			break  # esc to quit
 
 
