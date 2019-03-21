@@ -62,6 +62,7 @@ class PythonSandbox:
         #    outimg = inimg
         # which will make a simple copy of the input image to output.
         #outimg = cv2.Laplacian(inimg, -1, ksize=5, scale=0.25, delta=127)
+        
         #Find the image size
         height, width, channels = inimg.shape
         #Convert to gray scale
@@ -70,30 +71,47 @@ class PythonSandbox:
         procimgBlur = cv2.GaussianBlur(procimgGray, (5, 5), 0)
         #Detect edges
         procimgCanny = cv2.Canny(procimgBlur, 50, 255)
+        #Dilate so Hough has more to work with to detect joining lines
+        dilatation_size = 1
+        dilatationElement = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2*dilatation_size + 1, 2*dilatation_size+1), (dilatation_size, dilatation_size))
+        dilatedimg = cv2.dilate(procimgCanny, dilatationElement)
         #Detect Hough lines
-        plines_gaus = cv2.HoughLinesP( procimgCanny, rho=6, theta= np.pi / 60, threshold=120, lines=np.array([]), minLineLength=5, maxLineGap=21)
+        plines_gaus = cv2.HoughLinesP( dilatedimg, rho=6, theta= np.pi / 60, threshold=120, lines=np.array([]), minLineLength=25, maxLineGap=21)
+        
+        #Now detect only verticalish lines
+        vertlines = self.detectVertical(plines_gaus)
+        
         # Create a blank 3 channel image that matches the original in size.
         imgPlines = np.zeros( ( height, width, 3), dtype=np.uint8,)
         #Draw lines an image
-        imgPlines = self.draw_lines(imgPlines, plines_gaus, (0, 0,255), 3)
+        imgPlines, linecount = self.drawLines(imgPlines, vertlines, (10, 30,255), 3)
+        #Crate a blank image with color depth 1
+        imgBlank = np.zeros( ( height, width, 1), dtype=np.uint8)
+
         
         #At this point we have the following images available...
-        #inimg        = original image             - 3 channel color
-        #procimgGray  = gray scale of input image  - 1 channel color
-        #procimgBlur  = Gausian blured image       - 1 channel color
-        #procimgCanny = Canny edges image          - 1 channel color
-        #imgPlines    = Hough detected lines       - 3 channel color
+        #inimg        = original image              - 3 channel color
+        #procimgGray  = gray scale of input image   - 1 channel color
+        #procimgBlur  = Gausian blured image        - 1 channel color
+        #procimgCanny = Canny edges image           - 1 channel color
+        #imgBlank     = Blank image for bgr padding - 1 channel color
+        #imgPlines    = Hough detected lines        - 3 channel color
         #
         
 #        #Convert processed image back to BGR so we can merge with original BGR image
         procimagebgr = cv2.merge((procimgCanny, procimgCanny, procimgCanny))
+        procimgCannybgr = cv2.merge((imgBlank, imgBlank, procimgCanny))
+        
 #        #Merge desired intermediate images
         outimg = cv2.add(imgPlines, procimagebgr) 
+        outimg = cv2.add(outimg, inimg) 
+        #outimg = cv2.add(inimg, procimgCannybgr) 
+        #outimg = procimgCannybgr;
         
         #Draw target guide lines to aid driver
         cv2.line(outimg, ((int)(width / 2), 0),        ((int)(width / 2), height), (255, 0, 0), 1)
-        cv2.line(outimg, ((int)(width / 2) - 20, 100), ((int)(width / 2) - 40, height), (255, 0, 0), 1)
-        cv2.line(outimg, ((int)(width / 2) + 20, 100), ((int)(width / 2) + 40, height), (255, 0, 0), 1)
+        cv2.line(outimg, ((int)(width / 2) - 15, 100), ((int)(width / 2) - 60, height), (255, 0, 0), 1)
+        cv2.line(outimg, ((int)(width / 2) + 15, 100), ((int)(width / 2) + 60, height), (255, 0, 0), 1)
                 
         # Write a title:
         cv2.putText(outimg, "Robocats Vision Guide", (3, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255))
@@ -103,20 +121,34 @@ class PythonSandbox:
         #Check output image size
         outheight, outwidth, outchannels = outimg.shape
         #Display some facts at the bottom of the image
-        cv2.putText(outimg, fps, (3, outheight - 6), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255))
+        
+        #cv2.putText(outimg, fps, (3, outheight - 6), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255))
+        cv2.putText(outimg, str(linecount), (3, outheight - 6), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255))
 
         # Convert our OpenCv output image to video output format and send to host over USB:
         outframe.sendCv(outimg)
 
-    def draw_lines(self, img, lines, color=[255, 0, 0], thickness=3):
+    def drawLines(self, img, lines, color=[255, 0, 0], thickness=3):
+        linecount = 0
         # If there are no lines to draw, exit.
         if lines is None:
-            return img
+            return img, linecount
 
         # Loop over all lines and draw them on the blank image.
         for line in lines:
             for x1, y1, x2, y2 in line:
                 cv2.line(img, (x1, y1), (x2, y2), color, thickness)
-
+                linecount = linecount + 1
         # Return the lines image.
-        return img
+        return img, linecount
+        
+    def detectVertical(self, lines):
+        returnlinescount = 0
+        returnlines = []
+        # Loop over all lines and 
+        for line in lines:
+            x1, y1, x2, y2 = line[0]
+            #Do cheezy vertical detection by seeing if delta x less than delta y
+            #if (abs(x1 - x2) < abs(y1 - y2)):
+            #mainly vertical so add to return list
+        return lines
