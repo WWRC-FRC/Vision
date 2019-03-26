@@ -1,17 +1,23 @@
+#Based of multiple sources including the following...
+#https://www.pyimagesearch.com/2015/09/14/ball-tracking-with-opencv/
+
 import numpy as np
 import cv2
 import math
 
-lower = (36, 25, 25)
-upper = (70, 255,255)
+#lower = (36, 25, 25)
+#upper = (70, 255,255)
+lower = (29, 86, 6)
+upper = (64, 255,255)
 
 def alignment_detect(sourceImg):
         frame = sourceImg
 
         canvas = frame.copy()
 	hsvImg = cv2.cvtColor(canvas, cv2.COLOR_BGR2HSV)
+	
+        maskImg = cv2.inRange(hsvImg, lower, upper)
 
-        mask = cv2.inRange(hsvImg, lower, upper)
         try:
 	    print ("In")
             # NB: using _ as the variable name for two of the outputs, as they're not used

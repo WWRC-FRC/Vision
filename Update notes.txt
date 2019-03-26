@@ -1,0 +1,8 @@
+sudo apt-get install fswebcam
+sudo apt-get install python-matplotlib
+sudo pip3 install drawnow
+
+fswebcam image.jpg
+fswebcam -r 1280x720 image2.jpg
+fswebcam -r 1280x720 --no-banner image3.jpg
+

@@ -1,9 +1,14 @@
+#Based of multiple sources including the following...
+#https://www.pyimagesearch.com/2015/09/14/ball-tracking-with-opencv/
+
 import numpy as np
 import cv2
 import math
 
-lower = (36, 25, 25)
-upper = (70, 255,255)
+#lower = (36, 25, 25)
+#upper = (70, 255,255)
+lower = (29, 86, 6)
+upper = (64, 255,255)
 
 def alignment_detect(sourceImg):
         frame = sourceImg
@@ -13,8 +18,10 @@ def alignment_detect(sourceImg):
 
         mask = cv2.inRange(hsvImg, lower, upper)
         try:
+	    print ("In")
             # NB: using _ as the variable name for two of the outputs, as they're not used
             _, contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+	    print ("Found")
             blob = max(contours, key=lambda el: cv2.contourArea(el))
             M = cv2.moments(blob)
             center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
