@@ -3,9 +3,9 @@ import cv2
 import math
 
 #Open the first video device and bind to 'cam'
-cap = cv2.VideoCapture(0)
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 352)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 288)
+#cap = cv2.VideoCapture(0)
+#cap.set(cv2.CAP_PROP_FRAME_WIDTH, 352)
+#cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 288)
 
 #First parameter is basically the color range we are looking for, i.e. green
 #Second parameter is basicaaly how much of the color exists (saturation)
@@ -29,10 +29,10 @@ hsv_gb = cv2.cvtColor(gb,cv2.COLOR_BGR2HSV)
 hsv_gc = cv2.cvtColor(gc,cv2.COLOR_BGR2HSV)
 hsv_gd = cv2.cvtColor(gd,cv2.COLOR_BGR2HSV)
 
-print "a = ", hsv_ga
-print "b = ", hsv_gb
-print "c = ", hsv_gc
-print "d = ", hsv_gd
+#print "a = ", hsv_ga
+#print "b = ", hsv_gb
+#print "c = ", hsv_gc
+#print "d = ", hsv_gd
 
 def alignment_detect(sourceImg):
 	#Find the image size and center
@@ -41,9 +41,9 @@ def alignment_detect(sourceImg):
 	midY = int(height / 2)
 	#Convert to HSV color space for simpler matching
 	hsvImg = cv2.cvtColor(sourceImg, cv2.COLOR_BGR2HSV)
-	blurImg = cv2.GaussianBlur(hsvImg, (9, 9), 0)
+	blurImg = cv2.GaussianBlur(hsvImg, (3, 3), 0)
 	#Find everything that is 'green'
-	inRangeImg = cv2.inRange(hsvImg, colorLower, colorUpper)
+	inRangeImg = cv2.inRange(blurImg, colorLower, colorUpper)
 	#'erode' small features to get rid of noise
 	erodeImg = cv2.erode(inRangeImg, None, iterations=5)
 	#'dilate' back
@@ -54,9 +54,13 @@ def alignment_detect(sourceImg):
 
 	center = None
 	#Run through contours and draw circles, adding coordinates and size to a list
-	
 	location, displayImg = findTargets(contours, sourceImg)
-	displayImg = draw_cross(displayImg, midX, midY, color=[255, 0, 0], thickness=1)
+	#Convert from -1 +1 to window sized/centerd coordinates
+	locationWindow = (int(((location[0] * width) + width) / 2) , int(((location[1] * height) + height) / 2))
+	#Draw center line guide
+	displayImg = draw_cross(displayImg, (midX, midY), color=[255, 0, 0], thickness=1)
+	#Draw target centers guide
+	displayImg = draw_cross(displayImg, locationWindow, color=[140, 0, 200], thickness=2)
 
 	cv2.imshow("sourceImg",   sourceImg)
 	cv2.imshow("maskImg",     maskImg)
@@ -65,6 +69,7 @@ def alignment_detect(sourceImg):
 	cv2.imshow("erodeImg",  erodeImg)
 
 def findTargets(contours, imgIn):
+	#Find discrete blobs in the list of contours provided
 	#Points are converted to -1 to +1 so not dependent on source image size
 	blobLocations = []
 	imgOut = np.copy(imgIn)
@@ -72,11 +77,9 @@ def findTargets(contours, imgIn):
 	width, height = height, width = imgIn.shape[:2]
 	midX = int(width / 2)
 	midY = int(height / 2)
-	print "Count = ", len(contours)
 	#Only proceed if see 2 or more blobs
 	loop = 0
 	for marker in contours:
-		print "Marker ", loop, " = "#, marker
 		loop = loop + 1
 		#Find the enclosing circle coordinates & size
 		((x, y), radius) = cv2.minEnclosingCircle(marker)
@@ -87,7 +90,8 @@ def findTargets(contours, imgIn):
 			(cx, cy) = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
 		else:
 			(cx, cy) = (midX, midY)
-		if radius > 0:
+		#Check if the blob has some reasonable size (filter small noise blobs)
+		if radius > 20:
 			# draw the centroid on the frame,
 			cv2.circle(imgOut, (cx, cy), 5, (0, 0, 255), -1)
 			cv2.circle(imgOut, (cx, cy), int(radius), (0, 255, 255), 2)
@@ -99,12 +103,37 @@ def findTargets(contours, imgIn):
 	return targetCenter, imgOut
 
 def findCenterMid(points):
-#	print(points)
-#	for point in points:
+	if (len(points) < 2):#Less than 2 points so can't really track markers. Keep going straight
+		return (0, 0)
+	elif (len(points) == 2): #Only 2 points found so just use them directly
+		return findCenter(points[0], points[1])
+	else:
+		#Multiple points so need to find the closest 2 points to the center line
+		entries = len(points)
+		p1 = (10000, 10000)
+		p2 = (10000, 10000)
+		for loop in range(0, entries - 1):
+			p1, p2 = findSmallestTwo(points[loop], p1, p2)
 
-	return (100, 30)
+	return findCenter(p1, p2)
 
-def draw_cross(img, x, y, color=[255, 0, 0], thickness=3):
+def findSmallestTwo(p1, p2, p3):
+	#Check the x deviations from center and pick the smallest 2 from 3
+	if (abs(p1[0]) < abs(p2[0])):         #p1 < p2, check where p3 is
+		if (abs(p2[0]) < abs(p3[0])):
+			return p1, p2
+		else :
+			return p1, p3
+	else:                                 #p2 < p1, check where p3 is
+		if (abs(p3[0]) < abs(p1[0])):
+			return p2, p3
+		else :
+			return p2, p1
+
+def findCenter(p1, p2):
+	return ((p1[0] + p2[0]) / 2),((p1[1] + p2[1]) / 2) 
+
+def draw_cross(img, (x, y), color=[255, 0, 0], thickness=3):
 	height, width, channels = img.shape 
 	# Make a copy of the original image.
 	img_out = np.copy(img)
@@ -116,17 +145,17 @@ def do_processing():
 	global img
 
 	#Load an image from a file into 'img' array
-#	img = cv2.imread("Retro1.jpg");
+	img = cv2.imread("Retro1.jpg");
 
 	while True:
 		#Capture an image from the camera and assign to 'img' array
-		ret_val, img = cap.read()
+#		ret_val, img = cap.read()
 
 
 		#Pass the image in to the alignment detector
 		alignment_detect(img)
 
-		if cv2.waitKey(1) == 27: 
+		if cv2.waitKey(0) == 27: 
 			break  # esc to quit
 
 
