@@ -9,9 +9,9 @@ import cv2
 import math
 
 #Open the first video device and bind to 'cam'
-#cap = cv2.VideoCapture(0)
-#cap.set(cv2.CAP_PROP_FRAME_WIDTH, 352)
-#cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 288)
+cap = cv2.VideoCapture(0)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 352)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 288)
 
 #First parameter is basically the color range we are looking for, i.e. green
 #Second parameter is basicaaly how much of the color exists (saturation)
@@ -109,6 +109,7 @@ def findTargets(contours, imgIn):
 	return targetCenter, imgOut
 
 def findCenterMid(points):
+	print "Source points = ", points
 	if (len(points) < 2):#Less than 2 points so can't really track markers. Keep going straight
 		return (0, 0)
 	elif (len(points) == 2): #Only 2 points found so just use them directly
@@ -118,23 +119,26 @@ def findCenterMid(points):
 		entries = len(points)
 		p1 = (10000, 10000)
 		p2 = (10000, 10000)
-		for loop in range(0, entries - 1):
+		for loop in range(0, entries):
 			p1, p2 = findSmallestTwo(points[loop], p1, p2)
 
 	return findCenter(p1, p2)
 
 def findSmallestTwo(p1, p2, p3):
 	#Check the x deviations from center and pick the smallest 2 from 3
+	print "in = " , p1, p2, p3
 	if (abs(p1[0]) < abs(p2[0])):         #p1 < p2, check where p3 is
 		if (abs(p2[0]) < abs(p3[0])):
-			return p1, p2
+			(o1, o2) = (p1, p2)
 		else :
-			return p1, p3
+			(o1, o2) = (p1, p3)
 	else:                                 #p2 < p1, check where p3 is
 		if (abs(p3[0]) < abs(p1[0])):
-			return p2, p3
+			(o1, o1) = (p2, p3)
 		else :
-			return p2, p1
+			(o1, o2) = (p2, p1)
+	print "out = " , o1, o2
+	return o1, o2
 
 def findCenter(p1, p2):
 	return ((p1[0] + p2[0]) / 2),((p1[1] + p2[1]) / 2) 
@@ -151,7 +155,7 @@ def do_processing():
 	global img
 
 	#Load an image from a file into 'img' array
-	img = cv2.imread("Retro1.jpg");
+	img = cv2.imread("Retro2.jpg");
 
 	while True:
 		#Capture an image from the camera and assign to 'img' array
@@ -159,6 +163,9 @@ def do_processing():
 
 
 		#Pass the image in to the alignment detector
+		print
+		print
+		print "Processing new image"
 		alignment_detect(img)
 
 		if cv2.waitKey(0) == 27: 
