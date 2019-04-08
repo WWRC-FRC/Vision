@@ -1,0 +1,66 @@
+Enable/disable USB video output 
+https://www.chiefdelphi.com/t/jevois-smart-machine-vision/160713/87
+
+
+# ###################################################################################################
+    ## Process function with no USB output
+    def process(self, inframe):
+        jevois.LFATAL("process no usb not implemented")
+
+    # ###################################################################################################
+    ## Process function with USB output
+    def process(self, inframe, outframe):
+        jevois.LINFO("process with usb")
+
+Update:
+This Works
+
+
+    def process(self, inframe, outframe = None):
+        if outframe is None:
+            jevois.sendSerial("NO USB OUT IS RUNNING!!!")
+        else:
+            jevois.sendSerial("USB OUT IS WORKING!!!")
+
+
+
+# ###################################################################################################
+    ## Process function called by JeVois Engine
+    def process(self, inframe, outframe = None):
+         if outframe is None:
+             self.processNoUSB(inframe)
+         else:
+             self.processUSB(inframe, outframe)
+
+    # ###################################################################################################
+    ## Process function with USB output
+    def processUSB(self, inframe, outframe):
+        jevois.LINFO("process with usb")
+
+###################################################################################################
+    ## Process function with no USB output
+    def processNoUSB(self, inframe): 
+        jevois.LINFO("process no usb")
+
+
+or....
+if outframe is not None:
+            outframe.sendCvBGR(outimg)
+
+
+You should be able to eliminate the JeVois engine responses by using
+setpar serlog None
+
+Our team was able to get the python sandbox feed to the smart dashboard. Not sure how to get any other altered stream but check the following
+
+    For the USB camera, use the usbCamera.setVideoMode(PixelFormat.kYUYV, WIDTH, HEIGHT, FRAME_RATE);
+    On the dashboard add a MJPEG Server Stream with the URL using your team number http://roborio-XXXX-frc.local:PORT/stream.mjpg
+    Make sure that the PORT is the same port you declared for the MjpegServer
+
+hope that helps
+
+Angle Calculation from image of goal
+====================================
+https://www.chiefdelphi.com/t/angle-calculation-from-image-of-goal/151432
+
+
