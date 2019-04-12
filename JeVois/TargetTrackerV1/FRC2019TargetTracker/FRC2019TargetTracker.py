@@ -9,8 +9,7 @@ class FRC2019TargetTracker:
     def __init__(self):
      
         self.timer = jevois.Timer("sandbox", 100, jevois.LOG_INFO)
-        self.send_result = 0
-        self.x_center = 0.0;
+        self.center = (0.0, 0.0);
         
     # ###################################################################################################
     send_result = 0
@@ -30,12 +29,12 @@ class FRC2019TargetTracker:
         height, width, channels = inimg.shape
         
         target, outimg = self.alignment_detect(inimg)
-        jevois.sendSerial(str(target) + 'XG')
+        #jevois.sendSerial(str(target) + 'XG')
+        #jevois.sendSerial(str(target[0]) + 'XG')
                 
         # Write a title:
         cv2.putText(outimg, "Robocats Vision Guide", (3, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255))
-        cv2.putText(outimg, str(self.send_result) + " " + str(target[0]), (3, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255))
-        self.send_result = self.send_result + 1;
+        cv2.putText(outimg, str(target[0]), (3, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255))
         # Write frames/s info from our timer into the edge map (NOTE: does not account for output conversion time):
         fps = self.timer.stop()
         #Check output image size
@@ -79,7 +78,7 @@ class FRC2019TargetTracker:
 
         #Run through contours and draw circles, adding coordinates and size to a list
         location, displayImg = self.findTargets(contours, sourceImg)
-        self.x_center = location
+        self.center = location
         #Convert from -1 +1 to window sized/centerd coordinates
         locationWindow = (int(((location[0] * width) + width) / 2) , int(((location[1] * height) + height) / 2))
         #Draw center line guide
@@ -163,14 +162,14 @@ class FRC2019TargetTracker:
 
     def process_go(self):
         self.send_result = 1
-#        temp = "{:2.4f}".format(self.x_center)
-#        return "{:2.4f}".format(self.x_center)
-        return "{:2.4f}".format(2.3)
+        result = "{:2.4f}XG".format(self.center[0])
+        jevois.sendSerial(result)
+        return result
 
     # ###################################################################################################
     ## Parse a serial command forwarded to us by the JeVois Engine, return a string
     def parseSerial(self, str):
-        jevois.LINFO("parseserial received command [{}]".format(str))
+        #jevois.LINFO("parseserial received command [{}]".format(str))
         if str == "GO":
             return self.process_go()
         return "ERR Unsupported command"
