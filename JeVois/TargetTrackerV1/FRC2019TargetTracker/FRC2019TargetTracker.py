@@ -56,8 +56,10 @@ class FRC2019TargetTracker:
         #colorUpper = (85, 255,255)
         #colorLower = (56, 25, 100)
         #colorUpper = (70, 255,255)
-        colorLower = (32, 45, 25)
-        colorUpper = (75, 255,255)
+        #colorLower = (32, 45, 25)
+        #colorUpper = (75, 255,255)
+        colorLower = (68, 75, 50)
+        colorUpper = (86, 255,255)
         
         #Find the image size and center
         width, height = height, width = sourceImg.shape[:2]
@@ -113,28 +115,30 @@ class FRC2019TargetTracker:
             if radius > 20:
                 # draw the centroid on the frame,
                 cv2.circle(imgOut, (cx, cy), 5, (0, 0, 255), -1)
-                cv2.circle(imgOut, (cx, cy), int(radius), (0, 255, 255), 2)
+                #cv2.circle(imgOut, (cx, cy), int(radius), (0, 255, 255), 2)
                 cxn = float(cx - midX) / midX
                 cyn = float(cy - midY) / midY
-                blobLocations.append((cxn, cyn))
+                blobLocations.append((cxn, cyn, cx, cy, radius))#Save center weighted real and window centric integers and size
         #Now cycle through all blobs to find 2 closest to the centerline then find center of those 2
-        targetCenter = self.findCenterMid(blobLocations)
+        targetCenter, p1, p2 = self.findCenterMid(blobLocations)
+        cv2.circle(imgOut, (int(p1[2]), int(p1[3])), int(p1[4]), (0, 255, 255), 1)
+        cv2.circle(imgOut, (int(p2[2]), int(p2[3])), int(p2[4]), (0, 255, 255), 1)
         return targetCenter, imgOut
 
     def findCenterMid(self, points):
+        p1 = (10000, 10000, 0, 0, 0)
+        p2 = (10000, 10000, 0, 0, 0)
         if (len(points) < 2):#Less than 2 points so can't really track markers. Keep going straight
-            return (0, 0)
+            return (0, 0), p1, p2
         elif (len(points) == 2): #Only 2 points found so just use them directly
-            return self.findCenter(points[0], points[1])
+            return self.findCenter(points[0], points[1]),points[0], points[1]
         else:
             #Multiple points so need to find the closest 2 points to the center line
             entries = len(points)
-            p1 = (10000, 10000)
-            p2 = (10000, 10000)
             for loop in range(0, entries):
                 p1, p2 = self.findSmallestTwo(points[loop], p1, p2)
         
-        return self.findCenter(p1, p2)
+        return self.findCenter(p1, p2), p1, p2
 
     def findSmallestTwo(self, p1, p2, p3):
         #Check the x deviations from center and pick the smallest 2 from 3
